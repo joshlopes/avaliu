@@ -33,11 +33,11 @@
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
-    "axios": "^1.7.9",
+    "axios": "^1.11.0",
     "bcrypt": "^5.1.1",
-    "bignumber.js": "^9.1.2",
+    "bignumber.js": "^9.3.1",
     "cors": "^2.8.5",
-    "dotenv": "^16.4.7",
+    "dotenv": "^16.6.1",
     "express": "^4.21.2",
     "inversify": "^6.2.2",
     "js-yaml": "^4.1.0",
@@ -74,6 +74,6 @@
     "typescript": "^5.9.2"
   },
   "optionalDependencies": {
-    "argon2": "^0.41.1"
+    "argon2": "^0.44.0"
   }
 }
