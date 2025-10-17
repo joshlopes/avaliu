@@ -22,7 +22,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Deploy Image to CapRrover
-        uses: caprover/deploy-from-github@v1.1.2
+        uses: caprover/deploy-from-github@v1.2.0
         with:
           server: "${{ secrets.CAPROVER_SERVER }}"
           app: "${{ secrets.CAPROVER_FRONTEND_APP }}"
