@@ -1,4 +1,4 @@
-FROM node:20.20.2-alpine as app_base
+FROM node:24.15.0-alpine as app_base
 
 RUN apk --no-cache add mariadb-client openssl
 
