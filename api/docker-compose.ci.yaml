@@ -1,6 +1,6 @@
 services:
   database:
-    image: mariadb:11.8.7
+    image: mariadb:11.8.8
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: ricardo-avaliacao
