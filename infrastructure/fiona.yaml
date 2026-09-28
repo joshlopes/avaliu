@@ -1,0 +1,90 @@
+# Avaliu on Fiona (lotto), as a Portainer stack.
+#
+# Caddy (container `caddy` on the external `proxy` network) routes
+# avaliu.pt and www.avaliu.pt to avaliu-frontend:80, and api.avaliu.pt and
+# avaliu-api.fiona.tedcrypto.io to avaliu-api:3003.
+#
+# Secrets are Portainer stack env vars, never committed:
+#   DB_ROOT_PASSWORD, DB_PASSWORD, API_SECRET_TOKEN, API_DATABASE_URL,
+#   BACKUP_DUMP_TARGET
+# The data volume is the one CapRover created, mounted as external.
+
+services:
+  avaliu-db:
+    image: mariadb:11.5.2
+    container_name: avaliu-db
+    restart: unless-stopped
+    command:
+      - --log-bin=mysql-bin
+      - --binlog-format=ROW
+      - --expire-logs-days=7
+      - --server-id=1
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: avaliu
+      MYSQL_USER: uavaliu
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - internal
+
+  avaliu-api:
+    image: joshlopes/ricardo-avaliacao-api:latest
+    container_name: avaliu-api
+    restart: unless-stopped
+    environment:
+      SECRET_TOKEN: ${API_SECRET_TOKEN}
+      PORT: "3003"
+      CORS_ORIGIN: "*"
+      DATABASE_URL: ${API_DATABASE_URL}
+      APP_ENV: prod
+      NODE_ENVIRONMENT: production
+    depends_on:
+      avaliu-db:
+        condition: service_healthy
+    networks:
+      - internal
+      - proxy
+
+  avaliu-frontend:
+    image: joshlopes/ricardo-avaliacao-frontend:latest
+    container_name: avaliu-frontend
+    restart: unless-stopped
+    environment:
+      API_HOST: https://api.avaliu.pt
+    networks:
+      - proxy
+
+  avaliu-db-backup:
+    image: databack/mysql-backup:v0.12.0
+    container_name: avaliu-db-backup
+    restart: unless-stopped
+    environment:
+      DB_SERVER: avaliu-db
+      DB_PORT: "3306"
+      DB_USER: root
+      DB_PASS: ${DB_ROOT_PASSWORD}
+      DB_DUMP_TARGET: ${BACKUP_DUMP_TARGET}
+      DB_DUMP_BY_SCHEMA: "true"
+    depends_on:
+      avaliu-db:
+        condition: service_healthy
+    networks:
+      - internal
+
+volumes:
+  db-data:
+    external: true
+    name: captain--avaliu-db-data
+
+networks:
+  internal:
+  proxy:
+    external: true

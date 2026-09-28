@@ -6,6 +6,10 @@ on:
     types:
       - completed
 
+concurrency:
+  group: portainer-avaliu
+  cancel-in-progress: false
+
 jobs:
   deploy:
     name: "Deploy Image"
@@ -21,13 +25,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy Image to CapRrover
-        uses: caprover/deploy-from-github@v1.2.0
+      - name: Deploy the avaliu stack on Fiona
+        uses: ./.github/actions/portainer-deploy
         with:
-          server: "${{ secrets.CAPROVER_SERVER }}"
-          app: "${{ secrets.CAPROVER_FRONTEND_APP }}"
-          token: "${{ secrets.CAPROVER_FRONTEND_TOKEN }}"
-          image: "${{ env.DOCKER_IMAGE_NAME }}:latest"
+          stack-file: ${{ github.workspace }}/infrastructure/fiona.yaml
+          ts-oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          ts-oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          portainer-url: ${{ secrets.PORTAINER_URL }}
+          portainer-token: ${{ secrets.PORTAINER_ACCESS_TOKEN }}
+          stack-id: ${{ secrets.PORTAINER_STACK_ID }}
+          endpoint-id: ${{ secrets.PORTAINER_ENDPOINT_ID }}
 
       - name: 'Send message'
         uses: ./.github/actions/send-telegram-message
@@ -40,4 +47,4 @@ jobs:
             ${{ github.actor }}: ${{ github.event.commits[0].message }}
             
             **Changes**: https://github.com/${{ github.repository }}/commit/${{github.sha}}
-            **Deployment**: ${{ secrets.CAPROVER_SERVER }}/#/apps/details/${{ secrets.CAPROVER_FRONTEND_APP }}
+            **Deployment**: Portainer stack avaliu on Fiona
