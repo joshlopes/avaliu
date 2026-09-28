@@ -1,0 +1,54 @@
+name: "Portainer deploy"
+description: "Join the tailnet as tag:ci and redeploy a Portainer stack on Fiona (lotto), pulling fresh images."
+
+inputs:
+  stack-file:
+    description: "Compose file to send. Empty keeps the stack's current file (for stacks that another repo owns)."
+    required: false
+    default: ""
+  ts-oauth-client-id:
+    required: true
+  ts-oauth-secret:
+    required: true
+  portainer-url:
+    required: true
+  portainer-token:
+    required: true
+  stack-id:
+    required: true
+  endpoint-id:
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Connect Tailscale
+      uses: tailscale/github-action@v3
+      with:
+        oauth-client-id: ${{ inputs.ts-oauth-client-id }}
+        oauth-secret: ${{ inputs.ts-oauth-secret }}
+        tags: tag:ci
+
+    - name: Redeploy the Portainer stack
+      shell: bash
+      env:
+        URL: ${{ inputs.portainer-url }}
+        TOKEN: ${{ inputs.portainer-token }}
+        STACK_ID: ${{ inputs.stack-id }}
+        ENDPOINT_ID: ${{ inputs.endpoint-id }}
+        STACK_FILE: ${{ inputs.stack-file }}
+      run: |
+        set -euo pipefail
+        # The stack env holds every secret; send it back unchanged.
+        ENV_JSON=$(curl -sS --fail-with-body -H "X-API-Key: $TOKEN" "$URL/api/stacks/$STACK_ID" | jq '.Env // []')
+        if [ -n "$STACK_FILE" ]; then
+          FILE=$(cat "$STACK_FILE")
+        else
+          FILE=$(curl -sS --fail-with-body -H "X-API-Key: $TOKEN" "$URL/api/stacks/$STACK_ID/file" | jq -r .StackFileContent)
+        fi
+        jq -n --arg file "$FILE" --argjson env "$ENV_JSON" \
+          '{StackFileContent: $file, Env: $env, Prune: false, PullImage: true}' \
+        | curl -sS --fail-with-body --max-time 600 -X PUT \
+            -H "X-API-Key: $TOKEN" -H "Content-Type: application/json" \
+            "$URL/api/stacks/$STACK_ID?endpointId=$ENDPOINT_ID" \
+            --data @- -o /dev/null -w "Portainer stack update: HTTP %{http_code}\n"
